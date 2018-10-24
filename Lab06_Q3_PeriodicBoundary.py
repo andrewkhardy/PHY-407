@@ -76,9 +76,9 @@ def doVerlet(num_particles, periodic = False):
         r7 = np.zeros([num_particles,2])
         r8 = np.zeros([num_particles,2])
     
-    Energy = np.zeros(N)
-    Pot = np.zeros(N)
-    Kin = np.zeros(N)
+    Energy = np.zeros(N) #array to store total energy at each time step
+    Pot = np.zeros(N) #array to store potential energy at each time step
+    Kin = np.zeros(N) #array to store kinetic energy at each time step
     
     #let's get the first v_prep's using equation 7
     for i in range(num_particles):
@@ -88,7 +88,7 @@ def doVerlet(num_particles, periodic = False):
                 fx[i] += fx_ij(r[i,0,0], r[j,0,0], r[i,0,1], r[j,0,1])
                 fy[i] += fy_ij(r[i,0,0], r[j,0,0], r[i,0,1], r[j,0,1])
                 
-                Pot[0] += Potential(R(r[i,0,0], r[j,0,0], r[i,0,1], r[j,0,1]))
+                Pot[0] += Potential(R(r[i,0,0], r[j,0,0], r[i,0,1], r[j,0,1])) #sum up the potential energies
                 
             if periodic: #need to add the interactions from the extra replicated particles
                 #replicate positions and shift
@@ -127,10 +127,12 @@ def doVerlet(num_particles, periodic = False):
                 fy[i] += fy_ij(r[i,0,0], r8[j,0], r[i,0,1], r8[j,1])
   
         #kinetic energy
-        Kin[0] += Kinetic(v[i, 0, 0], v[i, 0, 1])
+        Kin[0] += Kinetic(v[i, 0, 0], v[i, 0, 1]) #sum up the kinetic energies 
+		#these become the components of v(t+h/2) for the first iteration
         v_prep[i, 0] = v[i, 0, 0] + 0.5 * h * fx[i] 
         v_prep[i, 1] = v[i, 0, 1] + 0.5 * h * fy[i] 
     #total energy for t = 0
+	#sum up potential and kinetic for total energy 
     Energy[0] = Kin[0] + Pot[0]/2 #divide by 2 to account for double counting
     
     #now that we've 'prepped' the system we can begin iterating
@@ -164,7 +166,7 @@ def doVerlet(num_particles, periodic = False):
                     fx[j] += fx_ij(r[j,i,0], r[k,i,0], r[j,i,1], r[k,i,1])
                     fy[j] += fy_ij(r[j,i,0], r[k,i,0], r[j,i,1], r[k,i,1])
                     
-                    Pot[i] += Potential(R(r[j,i,0], r[k,i,0], r[j,i,1], r[k,i,1]))
+                    Pot[i] += Potential(R(r[j,i,0], r[k,i,0], r[j,i,1], r[k,i,1])) #sum up potential energies
                     
                 if periodic: #need to add the interactions from the extra replicated particles
                     #replicate positions and shit
@@ -210,13 +212,10 @@ def doVerlet(num_particles, periodic = False):
             v_prep[j, 0] += h * fx[j]
             v_prep[j, 1] += h * fy[j]
         for j in range(num_particles):
-            Kin[i] += Kinetic(v[j, i, 0], v[j, i, 1])
-
-        #print(Kin[i], Pot[i])
-
+            Kin[i] += Kinetic(v[j, i, 0], v[j, i, 1]) #sum up kinetic energies
+		#sum up kinetic and potential energy for total energy
         Energy[i] = Kin[i] + Pot[i]/2 #divide by 2 to account for double counting
-        #print(Kin[i], Pot[i])
-        #print(Energy[i])
+
     t = np.linspace(0,h*(N-1),N)
     return v, r, t, Energy, Kin, Pot
 	
@@ -224,9 +223,8 @@ def doVerlet(num_particles, periodic = False):
 num_particles = 16
 v, r, t, Energy, Kin, Pot = doVerlet(num_particles, periodic = True)
 
-#plot trajectories
 import matplotlib.pyplot as plt
-
+#plot trajectories
 plt.figure(figsize = (14,14))
 plt.title('Trajectory of Particles', fontsize = 14)
 plt.xlabel('$x(t)$', fontsize = 14)
@@ -237,3 +235,12 @@ for i in range(num_particles):
 plt.legend()
 plt.axis('equal')
 plt.show()
+#plot energy 
+plt.figure(figsize = (10,10))
+plt.plot(t, Energy, '.', label = 'Total Energy')
+plt.plot(t, Kin, '.', label = 'Kinetic')
+plt.plot(t, Pot/2, '.', label = 'Potential Energy')
+plt.title('Energy vs Time', fontsize = 14)
+plt.xlabel('time (s)', fontsize = 14)
+plt.ylabel('Energy (J)', fontsize = 14)
+plt.legend()
